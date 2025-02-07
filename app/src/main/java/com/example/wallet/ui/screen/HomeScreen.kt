@@ -29,7 +29,29 @@ import com.example.wallet.ui.theme.Gray600
 import com.example.wallet.ui.theme.GreenBase
 import com.example.wallet.ui.theme.GreenLight
 import com.example.wallet.ui.theme.RedBase
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
+
+data class Transaction(
+    var id: String? = null,
+    val userId: Int = 0,
+    val title: String = "",
+    val description: String = "",
+    val value: Double = 0.0,
+    val date: Long = 0L,
+    val type: String = "" // "despesa" ou "ganho"
+) {
+    // Construtor sem argumentos
+    constructor() : this(
+        id = null,
+        userId = 0,
+        title = "",
+        description = "",
+        value = 0.0,
+        date = 0L,
+        type = ""
+    )
+}
 
 @Composable
 fun HomeScreen(
@@ -43,21 +65,77 @@ fun HomeScreen(
     val coroutineScope = rememberCoroutineScope()
 
     var userName by remember { mutableStateOf("") }
-    val totalGains by transactionViewModel.totalGains.collectAsState()
-    val totalExpenses by transactionViewModel.totalExpenses.collectAsState()
-    val currentBalance by transactionViewModel.currentBalance.collectAsState()
+
+    // Room
+    // val totalGains by transactionViewModel.totalGains.collectAsState()
+    // val totalExpenses by transactionViewModel.totalExpenses.collectAsState()
+    // val currentBalance by transactionViewModel.currentBalance.collectAsState()
+
+    // Firebase
+    var totalGains by remember { mutableStateOf(0.0) }
+    var totalExpenses by remember { mutableStateOf(0.0) }
+    var currentBalance by remember { mutableStateOf(0.0) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     // Recuperar o usuário corrente e os dados financeiros ao iniciar a tela
     LaunchedEffect(Unit) {
         coroutineScope.launch {
-            val currentUser = userRepository.getCurrentUser()
-            userName = currentUser?.name ?: "Usuário Desconhecido"
+            try {
+                val currentUser = userRepository.getCurrentUser()
+                userName = currentUser?.name ?: "Usuário Desconhecido"
 
-            val userId = currentUser?.id ?: return@launch
+                val userId = currentUser?.id ?: return@launch
 
-            transactionViewModel.fetchTotalExpenses(userId)
-            transactionViewModel.fetchTotalGains(userId)
+                transactionViewModel.fetchTotalExpenses(userId)
+                transactionViewModel.fetchTotalGains(userId)
+
+                FirebaseFirestore.getInstance()
+                    .collection("transactions")
+                    .whereEqualTo("userId", userId)
+                    .get()
+                    .addOnSuccessListener { documents ->
+                        val transactions = documents.mapNotNull { it.toObject(Transaction::class.java) }
+                        totalGains = transactions.filter { it.type == "ganho" }.sumOf { it.value }
+                        totalExpenses = transactions.filter { it.type == "despesa" }.sumOf { it.value }
+                        currentBalance = totalGains - totalExpenses
+                        isLoading = false
+                    }
+                    .addOnFailureListener { exception ->
+                        errorMessage = "Erro ao carregar dados: ${exception.localizedMessage}"
+                        isLoading = false
+                    }
+            } catch (e: Exception) {
+                errorMessage = "Erro inesperado: ${e.localizedMessage}"
+                isLoading = false
+            }
         }
+    }
+
+    if (isLoading) {
+        // Indicador de carregamento
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    if (errorMessage != null) {
+        // Mensagem de erro
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = errorMessage ?: "Erro desconhecido.",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+        return
     }
 
     Column(

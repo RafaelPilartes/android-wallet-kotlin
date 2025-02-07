@@ -6,13 +6,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.wallet.data.entities.Transaction
+// import com.example.wallet.data.entities.Transaction
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.room.PrimaryKey
 import com.example.wallet.data.viewmodel.TransactionViewModel
 import com.example.wallet.ui.theme.GreenLight
 import com.example.wallet.ui.theme.RedBase
+import com.google.firebase.firestore.FirebaseFirestore
+import java.util.UUID
 
 @Composable
 fun DespesasCriarScreen(
@@ -73,16 +76,30 @@ fun DespesasCriarScreen(
 
         Button(
             onClick = {
-                viewModel.insertTransaction(
-                    Transaction(
-                        userId = userId,
-                        title = title,
-                        description = description,
-                        value = value.toDoubleOrNull() ?: 0.0,
-                        date = System.currentTimeMillis(), // Substituir por conversão de `date` caso necessário
-                        type = "despesa"
-                    )
+                val transaction = Transaction(
+                    id = UUID.randomUUID().toString(), // Gera um ID único
+                    userId = userId,
+                    title = title,
+                    description = description,
+                    value = value.toDoubleOrNull() ?: 0.0,
+                    date = System.currentTimeMillis(), // Substituir por conversão de `date` caso necessário
+                    type = "despesa"
                 )
+
+                addTransaction(transaction) {
+                    println("onSuccess ")
+                }
+
+                // viewModel.insertTransaction(
+                //  Transaction(
+                //      userId = userId,
+                //      title = title,
+                //      description = description,
+                //      value = value.toDoubleOrNull() ?: 0.0,
+                //      date = System.currentTimeMillis(), // Substituir por conversão de `date` caso necessário
+                //      type = "despesa"
+                //  )
+                //)
                 onNavigateBack()
             },
             modifier = Modifier.fillMaxWidth(),
@@ -104,4 +121,11 @@ fun DespesasCriarScreen(
         Spacer(modifier = Modifier.height(36.dp))
 
     }
+}
+
+fun addTransaction(user: Transaction, onSuccess: () -> Unit) {
+    FirebaseFirestore.getInstance().collection("transactions")
+        .add(user)
+        .addOnSuccessListener { onSuccess() }
+        .addOnFailureListener { e -> println("Error adding user: $e") }
 }

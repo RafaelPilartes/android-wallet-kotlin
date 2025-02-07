@@ -27,12 +27,15 @@ import com.example.wallet.ui.screen.GanhosEditarScreen
 import com.example.wallet.ui.screen.GanhosScreen
 import com.example.wallet.ui.screen.SplashScreen
 import kotlinx.coroutines.launch
+import com.google.firebase.FirebaseApp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         installSplashScreen()
+
+        FirebaseApp.initializeApp(this)
 
         lifecycleScope.launch {
             // Verifica se existe um usuário logado
@@ -137,23 +140,36 @@ class MainActivity : ComponentActivity() {
                 // Tela de edição de despesa
                 composable(
                     route = "despesas/editar/{expenseId}",
-                    arguments = listOf(navArgument("expenseId") { type = NavType.IntType })
+                    // Room
+                    // arguments = listOf(navArgument("expenseId") { type = NavType.IntType })
+
+                    // Firebase
+                    arguments = listOf(navArgument("expenseId") { type = NavType.StringType })
                 ) { backStackEntry ->
-                    val expenseId = backStackEntry.arguments?.getInt("expenseId") ?: -1
+                    // val expenseId = backStackEntry.arguments?.getInt("expenseId") ?: -1
 
                     // Obtenha a transação correspondente do ViewModel
-                    val expense = transactionViewModel.expenses.value.find { it.id == expenseId }
+                    // val expense = transactionViewModel.expenses.value.find { it.id == expenseId }
 
-                    if (expense != null) {
-                        DespesasEditarScreen(
-                            viewModel = transactionViewModel,
-                            expense = expense,
-                            onNavigateBack = { navController.popBackStack() }
-                        )
-                    } else {
+                    // if (expense != null) {
+                        // DespesasEditarScreen(
+                            // viewModel = transactionViewModel,
+                            // expense = expense,
+                            // onNavigateBack = { navController.popBackStack() }
+                        // )
+                    // } else {
                         // Tratamento para quando a transação não é encontrada
-                        Text("Transação não encontrada!")
-                    }
+                    //     Text("Transação não encontrada!")
+                    // }
+
+                    // Firebase
+                    val expenseId = backStackEntry.arguments?.getString("expenseId") ?: ""
+
+                    DespesasEditarScreen(
+                        viewModel = transactionViewModel,
+                        expenseId = expenseId,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
                 }
 
                 composable("ganhos") {
@@ -163,8 +179,11 @@ class MainActivity : ComponentActivity() {
                         onCreateIncome = {
                             navController.navigate("ganhos/criar")
                         },
-                        onEditIncome = { transaction ->
-                            navController.navigate("ganhos/editar/${transaction.id}")
+                        // Room
+                        // onEditIncome = { transaction ->
+                        // Firebase
+                        onEditIncome = { id ->
+                            navController.navigate("ganhos/editar/${id}")
                         }
                     )
                 }
@@ -181,20 +200,34 @@ class MainActivity : ComponentActivity() {
 
                 composable(
                     route = "ganhos/editar/{incomeId}",
-                    arguments = listOf(navArgument("incomeId") { type = NavType.IntType })
-                ) { backStackEntry ->
-                    val incomeId = backStackEntry.arguments?.getInt("incomeId") ?: -1
-                    val income = transactionViewModel.incomes.value.find { it.id == incomeId }
+                    // Room
+                    // arguments = listOf(navArgument("incomeId") { type = NavType.IntType })
 
-                    if (income != null) {
-                        GanhosEditarScreen(
-                            viewModel = transactionViewModel,
-                            income = income,
-                            onNavigateBack = { navController.popBackStack() }
-                        )
-                    } else {
-                        Text("Ganho não encontrado!")
-                    }
+                    // Firebase
+                    arguments = listOf(navArgument("incomeId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    // Room
+                    // val incomeId = backStackEntry.arguments?.getInt("incomeId") ?: ""
+                    // val income = transactionViewModel.incomes.value.find { it.id == incomeId }
+
+                    // if (income != null) {
+                        //GanhosEditarScreen(
+                            // viewModel = transactionViewModel,
+                            // income = income,
+                            // onNavigateBack = { navController.popBackStack() }
+                        // )
+                    // } else {
+                        // Text("Ganho não encontrado!")
+                    // }
+
+                    // Firebase
+                    val incomeId = backStackEntry.arguments?.getString("incomeId") ?: ""
+
+                    GanhosEditarScreen(
+                        viewModel = transactionViewModel,
+                        incomeId = incomeId,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
                 }
             }
         }

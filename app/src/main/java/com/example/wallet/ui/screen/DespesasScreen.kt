@@ -10,27 +10,47 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.wallet.data.entities.Transaction
+// import com.example.wallet.data.entities.Transaction
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.room.PrimaryKey
 import com.example.wallet.data.viewmodel.TransactionViewModel
 import com.example.wallet.ui.theme.GreenLight
+import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun DespesasScreen(
     viewModel: TransactionViewModel,
-    userId: Int,
+    userId: Any,
     onCreateExpense: () -> Unit,
     onEditExpense: (Transaction) -> Unit
 ) {
-    val expenses by viewModel.expenses.collectAsState(initial = emptyList())
+    // Room
+    // val expenses by viewModel.expenses.collectAsState(initial = emptyList())
     val searchQuery by viewModel.searchQueryExpenses.collectAsState(initial = "")
 
+    // Firebase
+    var expenses by remember { mutableStateOf<List<Transaction>>(emptyList()) }
+
     LaunchedEffect(Unit) {
-        viewModel.fetchExpenses(userId)
+        // Room
+        // viewModel.fetchExpenses(userId)
+
+        // Firebase
+        try {
+            fetchExpenses(userId) { fetchedExpenses ->
+                println("Expenses fetched successfully")
+                expenses = fetchedExpenses
+            }
+        } catch (e: Exception) {
+            println("Error in LaunchedEffect: $e")
+        }
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -39,7 +59,7 @@ fun DespesasScreen(
         // Campo de pesquisa
         OutlinedTextField(
             value = searchQuery,
-            onValueChange = { query -> viewModel.searchExpenses(userId, query) },
+            onValueChange = { query -> null },
             label = { Text("Pesquisar despesas") },
             modifier = Modifier
                 .fillMaxWidth()
@@ -70,9 +90,26 @@ fun DespesasScreen(
                         }
 
                         // Botão Deletar
-                        IconButton(onClick = { viewModel.deleteExpense(expense) }) {
+                        // Room
+                        // IconButton(onClick = { viewModel.deleteExpense(expense) }) {
+                        // Firebase
+                        IconButton(onClick = {
+                            deleteExpense(
+                                expenseId = expense.id ?: "0", // Passe o ID da despesa
+                                onSuccess = {
+                                    println("Despesa deletada com sucesso!")
+                                    // Atualize a lista após a exclusão
+                                    fetchExpenses(userId) { updatedExpenses ->
+                                        expenses = updatedExpenses
+                                    }
+                                },
+                                onFailure = { exception ->
+                                    println("Erro ao deletar despesa: $exception")
+                                }
+                            )
+                        }) {
                             Icon(
-                                imageVector = Icons.Default.Delete, // Substitua pelo ícone de deletar desejado
+                                imageVector = Icons.Default.Delete,
                                 contentDescription = "Deletar despesa",
                                 tint = MaterialTheme.colorScheme.error
                             )
@@ -102,4 +139,48 @@ fun DespesasScreen(
 
         Spacer(modifier = Modifier.height(36.dp))
     }
+}
+
+// Firebase
+fun fetchExpenses(userId: Any, onExpensesFetched: (List<Transaction>) -> Unit) {
+    FirebaseFirestore.getInstance().collection("transactions")
+        .whereEqualTo("userId", userId)
+        .whereEqualTo("type", "despesa")
+        .get()
+        .addOnSuccessListener { result ->
+            try {
+                val expenses = result.map { document ->
+                    document.toObject(Transaction::class.java).apply {
+                        println("Fetched Transaction: $this") // Log para verificar os dados
+                        id = document.id // Atribui o ID do documento
+                    }
+                }
+                onExpensesFetched(expenses)
+            } catch (e: Exception) {
+                println("Error mapping expenses: $e")
+            }
+        }
+        .addOnFailureListener { e ->
+            println("Error fetching expenses: $e")
+        }
+}
+
+fun deleteExpense(expenseId: String, onSuccess: () -> Unit = {}, onFailure: (Exception) -> Unit = {}) {
+    if (expenseId.isBlank()) {
+        println("Expense ID is blank or null!")
+        onFailure(Exception("Invalid Expense ID"))
+        return
+    }
+
+    FirebaseFirestore.getInstance().collection("transactions")
+        .document(expenseId)
+        .delete()
+        .addOnSuccessListener {
+            println("Expense deleted successfully: $expenseId")
+            onSuccess()
+        }
+        .addOnFailureListener { exception ->
+            println("Error deleting expense: $exception")
+            onFailure(exception)
+        }
 }

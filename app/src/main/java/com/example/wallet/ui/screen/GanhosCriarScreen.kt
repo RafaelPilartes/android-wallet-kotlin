@@ -13,6 +13,8 @@ import androidx.compose.runtime.setValue
 import com.example.wallet.data.viewmodel.TransactionViewModel
 import com.example.wallet.ui.theme.GreenLight
 import com.example.wallet.ui.theme.RedBase
+import com.google.firebase.firestore.FirebaseFirestore
+import java.util.UUID
 
 @Composable
 fun GanhosCriarScreen(
@@ -71,16 +73,30 @@ fun GanhosCriarScreen(
 
         Button(
             onClick = {
-                viewModel.insertTransaction(
-                    Transaction(
-                        userId = userId,
-                        title = title,
-                        description = description,
-                        value = value.toDoubleOrNull() ?: 0.0,
-                        date = System.currentTimeMillis(), // Substituir por lógica para converter `date`
-                        type = "ganho"
-                    )
+                val transaction = Transaction(
+                    id = UUID.randomUUID().toString(), // Gera um ID único
+                    userId = userId,
+                    title = title,
+                    description = description,
+                    value = value.toDoubleOrNull() ?: 0.0,
+                    date = System.currentTimeMillis(), // Substituir por lógica para converter `date`
+                    type = "ganho"
                 )
+
+                addTransaction(transaction) {
+                    println("onSuccess ")
+                }
+
+                // viewModel.insertTransaction(
+                //  Transaction(
+                //      userId = userId,
+                //      title = title,
+                //      description = description,
+                //      value = value.toDoubleOrNull() ?: 0.0,
+                //      date = System.currentTimeMillis(), // Substituir por conversão de `date` caso necessário
+                //      type = "ganho"
+                //  )
+                //)
                 onNavigateBack()
             },
             modifier = Modifier.fillMaxWidth(),
@@ -99,4 +115,11 @@ fun GanhosCriarScreen(
             Text("Cancelar")
         }
     }
+}
+
+fun addTransaction(user: Transaction, onSuccess: () -> Unit) {
+    FirebaseFirestore.getInstance().collection("transactions")
+        .add(user)
+        .addOnSuccessListener { onSuccess() }
+        .addOnFailureListener { e -> println("Error adding user: $e") }
 }

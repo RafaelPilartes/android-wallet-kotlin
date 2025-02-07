@@ -29,6 +29,7 @@ import com.example.wallet.ui.componet.WalletButton
 import com.example.wallet.ui.theme.GreenBase
 import com.example.wallet.utils.isSmallScreenHeight
 import com.example.wallet.utils.rememberImeState
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 
 @Composable
@@ -98,6 +99,38 @@ fun CadastroScreen(
                 showError.value = "Erro ao cadastrar usuário: ${e.message}"
             }
         }
+
+        // Usando Firebase Authentication para registrar o usuário
+        val firebaseAuth = FirebaseAuth.getInstance()
+
+        /*
+        firebaseAuth.createUserWithEmailAndPassword(userEmail, userPassword)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val user = FirebaseAuth.getInstance().currentUser
+                    user?.updateProfile(userProfileChangeRequest {
+                        displayName = userName
+                    })?.addOnCompleteListener { profileTask ->
+                        if (profileTask.isSuccessful) {
+                            println("Is Successful user: $profileTask")
+
+                            showSuccess.value = true
+                            showError.value = null
+                            name = TextFieldValue()
+                            email = TextFieldValue()
+                            password = TextFieldValue()
+                        } else {
+                            showError.value = "Erro ao atualizar nome do usuário: ${profileTask.exception?.message}"
+                        }
+                    }
+                } else {
+                    showError.value = "Erro ao cadastrar usuário: ${task.exception?.message}"
+                }
+            }
+            .addOnFailureListener { exception ->
+                showError.value = "Erro ao cadastrar usuário: ${exception.message}"
+            }
+         */
     }
 
     Column(
